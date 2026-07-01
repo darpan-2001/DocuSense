@@ -9,7 +9,7 @@ from src.preprocessing.cleaner import TextCleaner
 from src.preprocessing.metadata_extractor import MetadataExtractor
 from src.chunking.semantic_chunker import SemanticChunker
 from src.embeddings.embedding_model import EmbeddingModel
-from src.vectordb.qdrant_store import QdrantStore
+from src.vectordb.chroma_store import ChromaStore
 from src.retrieval.bm25_retriever import BM25Retriever
 from config.logging import log
 
@@ -23,7 +23,7 @@ class IndexingPipeline:
         self.metadata_extractor = MetadataExtractor()
         self.semantic_chunker = SemanticChunker()
         self.embedding_model = EmbeddingModel()
-        self.qdrant_store = QdrantStore()
+        self.chroma_store = ChromaStore()
         self.bm25_retriever = BM25Retriever()
         
         log.info("Initialized IndexingPipeline")
@@ -92,8 +92,8 @@ class IndexingPipeline:
                 # Clean up temporary file
                 Path(temp_file_path).unlink()
         
-        # Index chunks in Qdrant
-        self.qdrant_store.index_chunks(all_chunks, session_id)
+        # Index chunks in ChromaDB
+        self.chroma_store.index_chunks(all_chunks, session_id)
         
         # Index chunks for BM25
         self.bm25_retriever.index_documents(all_chunks, session_id)

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from src.pipeline.rag_pipeline import RAGPipeline
 from src.memory.memory_manager import MemoryManager
-from src.vectordb.qdrant_store import QdrantStore
+from src.vectordb.chroma_store import ChromaStore
 from src.retrieval.bm25_retriever import BM25Retriever
 from src.schemas.response_schema import SessionDeleteResponse
 from config.logging import log
@@ -10,7 +10,7 @@ router = APIRouter(prefix="/session", tags=["session"])
 
 # Initialize components
 memory_manager = MemoryManager()
-qdrant_store = QdrantStore()
+chroma_store = ChromaStore()
 bm25_retriever = BM25Retriever()
 
 
@@ -21,7 +21,7 @@ async def delete_session(session_id: str):
     
     Deletes:
     - Conversation memory
-    - Qdrant vector collection
+    - ChromaDB collection
     - BM25 index
     
     Args:
@@ -36,8 +36,8 @@ async def delete_session(session_id: str):
         # Clear conversation memory
         memory_manager.clear_memory(session_id)
         
-        # Delete Qdrant collection
-        qdrant_store.delete_collection(session_id)
+        # Delete ChromaDB collection
+        chroma_store.delete_collection(session_id)
         
         # Delete BM25 index
         bm25_retriever.delete_session(session_id)

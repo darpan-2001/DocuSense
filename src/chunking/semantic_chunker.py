@@ -1,26 +1,21 @@
 import uuid
 from typing import List, Dict, Any
-from langchain_text_splitters import SemanticChunker
-from src.embeddings.embedding_model import EmbeddingModel
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from config.settings import settings
 from config.logging import log
 
 
 class SemanticChunker:
-    """Chunk documents semantically using embeddings."""
+    """Chunk documents using recursive character splitting."""
     
-    def __init__(self, embedding_model: EmbeddingModel = None):
+    def __init__(self):
         """
-        Initialize semantic chunker.
-        
-        Args:
-            embedding_model: Embedding model instance
+        Initialize chunker.
         """
-        self.embedding_model = embedding_model or EmbeddingModel()
-        self.chunker = SemanticChunker(
-            embeddings=self.embedding_model.get_embeddings(),
-            breakpoint_threshold_type="percentile",
-            breakpoint_threshold_amount=settings.CHUNK_OVERLAP / settings.CHUNK_SIZE
+        self.chunker = RecursiveCharacterTextSplitter(
+            chunk_size=settings.CHUNK_SIZE,
+            chunk_overlap=settings.CHUNK_OVERLAP,
+            separators=["\n\n", "\n", ". ", " ", ""]
         )
         log.info("Initialized SemanticChunker")
     

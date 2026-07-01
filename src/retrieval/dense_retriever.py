@@ -1,22 +1,22 @@
 from typing import List, Dict, Any
-from src.vectordb.qdrant_store import QdrantStore
+from src.vectordb.chroma_store import ChromaStore
 from src.embeddings.embedding_model import EmbeddingModel
 from config.settings import settings
 from config.logging import log
 
 
 class DenseRetriever:
-    """Dense retrieval using Qdrant vector database."""
+    """Dense retrieval using ChromaDB vector database."""
     
-    def __init__(self, qdrant_store: QdrantStore = None, embedding_model: EmbeddingModel = None):
+    def __init__(self, chroma_store: ChromaStore = None, embedding_model: EmbeddingModel = None):
         """
         Initialize dense retriever.
         
         Args:
-            qdrant_store: Qdrant store instance
+            chroma_store: ChromaDB store instance
             embedding_model: Embedding model instance
         """
-        self.qdrant_store = qdrant_store or QdrantStore()
+        self.chroma_store = chroma_store or ChromaStore()
         self.embedding_model = embedding_model or EmbeddingModel()
         log.info("Initialized DenseRetriever")
     
@@ -44,8 +44,8 @@ class DenseRetriever:
         # Generate query embedding
         query_embedding = self.embedding_model.embed_text(query)
         
-        # Search in Qdrant
-        results = self.qdrant_store.search(
+        # Search in ChromaDB
+        results = self.chroma_store.search(
             query_embedding=query_embedding,
             session_id=session_id,
             limit=top_k

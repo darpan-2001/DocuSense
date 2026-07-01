@@ -13,11 +13,6 @@ class Settings(BaseSettings):
     # Groq API
     GROQ_API_KEY: str
     
-    # Qdrant Configuration
-    QDRANT_HOST: str = "localhost"
-    QDRANT_PORT: int = 6333
-    QDRANT_COLLECTION_PREFIX: str = "docu_sense"
-    
     # Embedding Model
     EMBEDDING_MODEL: str = "BAAI/bge-base-en-v1.5"
     EMBEDDING_DEVICE: str = "cpu"

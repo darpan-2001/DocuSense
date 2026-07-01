@@ -1,29 +1,30 @@
-from typing import List, Dict, Any, Optional
-from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
+from typing import List, Dict, Any
+import chromadb
+from chromadb.config import Settings as ChromaSettings
 from src.embeddings.embedding_model import EmbeddingModel
-from config.settings import settings
 from config.logging import log
 
 
-class QdrantStore:
-    """Qdrant vector database store for document chunks."""
+class ChromaStore:
+    """ChromaDB vector database store for document chunks."""
     
     def __init__(self, embedding_model: EmbeddingModel = None):
         """
-        Initialize Qdrant client.
+        Initialize ChromaDB client.
         
         Args:
             embedding_model: Embedding model instance
         """
         self.embedding_model = embedding_model or EmbeddingModel()
-        self.client = QdrantClient(
-            host=settings.QDRANT_HOST,
-            port=settings.QDRANT_PORT
+        self.client = chromadb.Client(
+            settings=ChromaSettings(
+                persist_directory="./chroma_db",
+                anonymized_telemetry=False
+            )
         )
         self.embedding_dim = self.embedding_model.get_embedding_dimension()
         
-        log.info(f"Connected to Qdrant at {settings.QDRANT_HOST}:{settings.QDRANT_PORT}")
+        log.info("Initialized ChromaDB with local storage")
     
     def get_collection_name(self, session_id: str) -> str:
         """
@@ -35,30 +36,7 @@ class QdrantStore:
         Returns:
             Collection name
         """
-        return f"{settings.QDRANT_COLLECTION_PREFIX}_{session_id}"
-    
-    def create_collection(self, session_id: str) -> None:
-        """
-        Create a new collection for a session.
-        
-        Args:
-            session_id: Session identifier
-        """
-        collection_name = self.get_collection_name(session_id)
-        
-        if self.client.collection_exists(collection_name):
-            log.info(f"Collection {collection_name} already exists")
-            return
-        
-        self.client.create_collection(
-            collection_name=collection_name,
-            vectors_config=VectorParams(
-                size=self.embedding_dim,
-                distance=Distance.COSINE
-            )
-        )
-        
-        log.info(f"Created collection: {collection_name}")
+        return f"docu_sense_{session_id}"
     
     def index_chunks(
         self,
@@ -66,7 +44,7 @@ class QdrantStore:
         session_id: str
     ) -> None:
         """
-        Index document chunks in Qdrant.
+        Index document chunks in ChromaDB.
         
         Args:
             chunks: List of chunks with text and metadata
@@ -74,33 +52,34 @@ class QdrantStore:
         """
         collection_name = self.get_collection_name(session_id)
         
-        # Ensure collection exists
-        self.create_collection(session_id)
+        # Get or create collection
+        try:
+            collection = self.client.get_collection(name=collection_name)
+        except:
+            collection = self.client.create_collection(
+                name=collection_name,
+                metadata={"hnsw:space": "cosine"}
+            )
+            log.info(f"Created collection: {collection_name}")
         
         # Generate embeddings for all chunks
         texts = [chunk["text"] for chunk in chunks]
         embeddings = self.embedding_model.embed_texts(texts)
         
-        # Create points for Qdrant
-        points = []
-        for idx, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
-            point = PointStruct(
-                id=idx,
-                vector=embedding,
-                payload={
-                    "text": chunk["text"],
-                    **chunk["metadata"]
-                }
-            )
-            points.append(point)
+        # Prepare data for ChromaDB
+        ids = [f"{session_id}_{idx}" for idx in range(len(chunks))]
+        documents = [chunk["text"] for chunk in chunks]
+        metadatas = [chunk["metadata"] for chunk in chunks]
         
-        # Insert points in batch
-        self.client.upsert(
-            collection_name=collection_name,
-            points=points
+        # Add to collection
+        collection.add(
+            ids=ids,
+            embeddings=embeddings,
+            documents=documents,
+            metadatas=metadatas
         )
         
-        log.info(f"Indexed {len(points)} chunks in collection {collection_name}")
+        log.info(f"Indexed {len(chunks)} chunks in collection {collection_name}")
     
     def search(
         self,
@@ -110,7 +89,7 @@ class QdrantStore:
         score_threshold: float = 0.0
     ) -> List[Dict[str, Any]]:
         """
-        Search for similar chunks in Qdrant.
+        Search for similar chunks in ChromaDB.
         
         Args:
             query_embedding: Query embedding vector
@@ -123,25 +102,32 @@ class QdrantStore:
         """
         collection_name = self.get_collection_name(session_id)
         
-        if not self.client.collection_exists(collection_name):
+        try:
+            collection = self.client.get_collection(name=collection_name)
+        except:
             log.warning(f"Collection {collection_name} does not exist")
             return []
         
-        results = self.client.search(
-            collection_name=collection_name,
-            query_vector=query_embedding,
-            limit=limit,
-            score_threshold=score_threshold
+        results = collection.query(
+            query_embeddings=[query_embedding],
+            n_results=limit
         )
         
         # Format results
         formatted_results = []
-        for result in results:
-            formatted_results.append({
-                "text": result.payload["text"],
-                "metadata": result.payload,
-                "score": result.score
-            })
+        if results["documents"] and results["documents"][0]:
+            for idx, doc in enumerate(results["documents"][0]):
+                distance = results["distances"][0][idx]
+                # ChromaDB uses cosine distance (0 = identical, 2 = opposite)
+                # Convert to similarity score (1 = identical, 0 = opposite)
+                score = 1 - (distance / 2)
+                
+                if score >= score_threshold:
+                    formatted_results.append({
+                        "text": doc,
+                        "metadata": results["metadatas"][0][idx],
+                        "score": score
+                    })
         
         log.info(f"Retrieved {len(formatted_results)} results from {collection_name}")
         return formatted_results
@@ -155,10 +141,10 @@ class QdrantStore:
         """
         collection_name = self.get_collection_name(session_id)
         
-        if self.client.collection_exists(collection_name):
-            self.client.delete_collection(collection_name)
+        try:
+            self.client.delete_collection(name=collection_name)
             log.info(f"Deleted collection: {collection_name}")
-        else:
+        except:
             log.warning(f"Collection {collection_name} does not exist")
     
     def collection_exists(self, session_id: str) -> bool:
@@ -172,4 +158,6 @@ class QdrantStore:
             True if collection exists, False otherwise
         """
         collection_name = self.get_collection_name(session_id)
-        return self.client.collection_exists(collection_name)
+        collections = self.client.list_collections()
+        
+        return any(col.name == collection_name for col in collections)

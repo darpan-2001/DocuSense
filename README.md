@@ -6,7 +6,7 @@ A production-style Retrieval Augmented Generation (RAG) backend application for 
 
 - **Multi-format Document Support**: Upload PDF, TXT, DOCX, and Markdown files
 - **Semantic Chunking**: Intelligent document segmentation using embeddings
-- **Hybrid Retrieval**: Combines dense vector search (Qdrant) with sparse BM25 retrieval
+- **Hybrid Retrieval**: Combines dense vector search (ChromaDB) with sparse BM25 retrieval
 - **Query Enhancement**: HyDE (Hypothetical Document Embeddings) for improved retrieval
 - **Cross-Encoder Reranking**: Re-ranks retrieved results for better relevance
 - **Conversation Memory**: Session-based conversational context with configurable history
@@ -18,7 +18,7 @@ A production-style Retrieval Augmented Generation (RAG) backend application for 
 
 ```
 Upload Documents → Document Loader → Parser → Metadata Extraction → Text Cleaning
-→ Semantic Chunking → HuggingFace Embeddings → Qdrant Vector DB
+→ Semantic Chunking → HuggingFace Embeddings → ChromaDB Vector DB
 
 User Question → Conversation Memory → HyDE Query Generation → Hybrid Retrieval
 (Dense + BM25) → Cross Encoder Reranker → Context Builder → Prompt Construction
@@ -30,13 +30,12 @@ User Question → Conversation Memory → HyDE Query Generation → Hybrid Retri
 - **Backend**: FastAPI
 - **LLM**: Groq (llama-3.3-70b-versatile)
 - **Embeddings**: HuggingFace (BAAI/bge-base-en-v1.5)
-- **Vector Database**: Qdrant
+- **Vector Database**: ChromaDB
 - **Reranker**: cross-encoder/ms-marco-MiniLM-L-6-v2
 
 ## Prerequisites
 
 - Python 3.9+
-- Qdrant server running locally or remotely
 - Groq API key
 
 ## Installation
@@ -58,19 +57,9 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-4. Configure environment variables:
-```bash
-cp .env.example .env
-```
-
-Edit `.env` and add your Groq API key:
+4. Create `.env` file and add your Groq API key:
 ```
 GROQ_API_KEY=your_groq_api_key_here
-```
-
-5. Start Qdrant server:
-```bash
-docker run -p 6333:6333 qdrant/qdrant
 ```
 
 ## Running the Application
@@ -166,7 +155,7 @@ docu_sense/
 │   ├── preprocessing/    # Text cleaning and metadata
 │   ├── chunking/         # Semantic chunking
 │   ├── embeddings/       # Embedding model
-│   ├── vectordb/         # Qdrant store
+│   ├── vectordb/         # ChromaDB store
 │   ├── retrieval/        # Retrieval components
 │   ├── query_processing/ # HyDE generator
 │   ├── reranking/        # Cross-encoder reranker
@@ -198,8 +187,6 @@ docu_sense/
 Key configuration options in `.env`:
 
 - `GROQ_API_KEY`: Your Groq API key
-- `QDRANT_HOST`: Qdrant server host (default: localhost)
-- `QDRANT_PORT`: Qdrant server port (default: 6333)
 - `EMBEDDING_MODEL`: HuggingFace embedding model
 - `LLM_MODEL`: Groq LLM model
 - `DENSE_WEIGHT`: Weight for dense retrieval (default: 0.7)

@@ -50,5 +50,5 @@ Thumbs.db
 temp/
 tmp/
 
-# Qdrant data (if running locally)
-qdrant_storage/
+# ChromaDB data
+chroma_db/

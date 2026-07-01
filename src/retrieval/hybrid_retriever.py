@@ -172,6 +172,6 @@ class HybridRetriever:
             chunks: List of chunks with text and metadata
             session_id: Session identifier
         """
-        # Index for BM25 (dense is already indexed in Qdrant)
+        # Index for BM25 (dense is already indexed in ChromaDB)
         self.bm25_retriever.index_documents(chunks, session_id)
         log.info(f"Indexed documents for hybrid retrieval in session {session_id}")

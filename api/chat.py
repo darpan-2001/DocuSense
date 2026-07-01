@@ -42,3 +42,27 @@ async def chat(request: ChatRequest):
     except Exception as e:
         log.error(f"Error processing chat request: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/history/{session_id}")
+async def get_history(session_id: str):
+    """
+    Get conversation history for a session.
+    
+    Args:
+        session_id: Session identifier
+        
+    Returns:
+        List of conversation exchanges
+    """
+    log.info(f"Retrieving history for session: {session_id}")
+    
+    try:
+        history = memory_manager.get_history(session_id)
+        return {
+            "session_id": session_id,
+            "history": history
+        }
+    except Exception as e:
+        log.error(f"Error retrieving history: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

@@ -1,3 +1,3 @@
-from src.vectordb.qdrant_store import QdrantStore
+from src.vectordb.chroma_store import ChromaStore
 
-__all__ = ["QdrantStore"]
+__all__ = ["ChromaStore"]
