@@ -1,5 +1,6 @@
 from typing import List, Dict, Any
 from sentence_transformers import CrossEncoder
+import numpy as np
 from config.settings import settings
 from config.logging import log
 
@@ -50,8 +51,11 @@ class CrossEncoderReranker:
         # Compute cross-encoder scores
         scores = self.model.predict(pairs)
         
-        # Add scores to documents
-        for doc, score in zip(documents, scores):
+        # Normalize scores using sigmoid to get 0-1 range
+        normalized_scores = 1 / (1 + np.exp(-scores))
+        
+        # Add normalized scores to documents
+        for doc, score in zip(documents, normalized_scores):
             doc["rerank_score"] = float(score)
         
         # Sort by rerank score

@@ -124,6 +124,25 @@ Ask questions about uploaded documents.
 }
 ```
 
+### Get Conversation History
+
+**GET** `/chat/history/{session_id}`
+
+Retrieve conversation history for a session.
+
+**Response**:
+```json
+{
+  "session_id": "uuid-string",
+  "history": [
+    {
+      "user_query": "What is the total tax?",
+      "assistant_response": "The total tax paid is 1422.00..."
+    }
+  ]
+}
+```
+
 ### Delete Session
 
 **DELETE** `/session/{session_id}`
